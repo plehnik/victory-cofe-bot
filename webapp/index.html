@@ -291,6 +291,7 @@ const H = { 'X-Telegram-Init-Data': initData, 'Content-Type': 'application/json'
 
 let me = null;
 let isSpinning = false; // флаг: крутится ли сейчас рулетка
+let currentView = 'qr'; // текущая открытая вкладка
 const views = ['wheel','codes','qr','scan'];
 // Дефолтная вкладка — 'qr' (Код), не 'home'
 let defaultView = 'qr';
@@ -389,12 +390,6 @@ async function load() {
   // Показываем сканер в нижнем меню для сотрудников
   const navScan = document.getElementById('nav-scan');
   if (navScan) navScan.classList.toggle('hidden', !isStaff);
-}
-
-async function copyText(text, btn, restoreLabel) {
-  try { await navigator.clipboard.writeText(text); } catch(e) {}
-  if (btn) { const t = btn.textContent; btn.textContent = '✅ Скопировано';
-             setTimeout(() => btn.textContent = restoreLabel || t, 1500); }
 }
 
 async function copyText(text, btn, restoreLabel) {
