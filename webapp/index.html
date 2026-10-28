@@ -323,6 +323,10 @@ document.getElementById('btn-back').addEventListener('click', () => {
 // ---------- Загрузка данных ----------
 async function load() {
   const r = await fetch('/api/me', { headers: H });
+  if (!r.ok) {
+    document.getElementById('home-status-text').textContent = 'Ошибка подключения — обновите страницу';
+    return;
+  }
   me = await r.json();
   if (!me) return;
 
