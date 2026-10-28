@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Victory Coffee</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#1a140f; --bg-alt:#221a14; --card:#f7f4ef; --gold:#c9a227;
+    --gold-deep:#a67c1a; --gold-soft:#f0e6c8; --ink:#1e1910;
+    --muted:#6b5e4f; --line:rgba(201,162,39,.2);
+    --green:#3f8f3c; --red:#c0392b; --blue:#5a8fc1;
+    --shadow:0 8px 30px rgba(0,0,0,.25);
+    --glow:0 0 12px rgba(201,162,39,.5);
+    --transition:all .25s ease;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Manrope',-apple-system,sans-serif; }
+  body { background:var(--bg); color:var(--ink); min-height:100vh; padding-bottom:70px; }
+  
+  /* ---------- Шапка ---------- */
+  .header {
+    background:linear-gradient(135deg,#2a1c12,#1e1409);
+    padding:16px 16px 12px; text-align:center; position:relative;
+    border-bottom:1px solid var(--line);
+  }
+  .header h1 { font-family:'Playfair Display',serif; font-weight:800;
+               font-size:24px; color:#f5ecd6; letter-spacing:.5px; }
+  .header .tagline { color:#c9a227; font-size:11px; margin-top:2px;
+                    letter-spacing:2px; text-transform:uppercase; }
+  .header-back { position:absolute; left:12px; top:50%; transform:translateY(-50%);
+                background:none; border:none; color:#c9a227; font-size:22px;
+                cursor:pointer; padding:8px; display:none; }
+
+  .container { padding:16px 16px 12px; max-width:420px; margin:0 auto; }
+
+  /* ---------- Статус-панель ---------- */
+  .status-bar {
+    background:linear-gradient(135deg,var(--gold-deep),#c9a227);
+    border-radius:16px; padding:14px 18px; margin-bottom:18px;
+    text-align:center; box-shadow:var(--shadow); color:#fff;
+  }
+  .status-bar .value { font-size:16px; font-weight:700; margin-top:2px; }
+  .status-bar .value.green { color:#e8f5e9; }
+
+  /* ---------- Карточки главной панели ---------- */
+  .home-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .home-card {
+    background:var(--card); border-radius:20px; padding:20px 12px;
+    text-align:center; cursor:pointer; box-shadow:var(--shadow);
+    border:1px solid var(--line); transition:var(--transition);
+    position:relative; overflow:hidden;
+  }
+  .home-card:hover { transform:translateY(-2px); box-shadow:0 12px 30px rgba(0,0,0,.35); }
+  .home-card:active { transform:scale(.96); }
+  .home-card.full { grid-column:1/-1; }
+  .home-card .icon { font-size:38px; margin-bottom:8px; display:block; }
+  .home-card .title { font-weight:800; font-size:15px; color:var(--ink); margin-bottom:4px; }
+  .home-card .desc { font-size:12px; color:var(--muted); line-height:1.3; }
+  .home-card .badge {
+    position:absolute; top:8px; right:8px; background:var(--gold);
+    color:#fff; font-size:10px; font-weight:800; padding:2px 7px;
+    border-radius:20px; box-shadow:var(--glow);
+  }
+
+  /* ---------- Секции с плавной анимацией ---------- */
+  .view {
+    display:none; opacity:0;
+    transform:translateY(8px);
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .view.active {
+    display:block; opacity:1;
+    transform:translateY(0);
+  }
+  
+  .card { background:var(--card); border-radius:18px; padding:16px;
+          margin-bottom:12px; box-shadow:var(--shadow); border:1px solid var(--line); }
+  .section-title { font-family:'Playfair Display',serif; font-size:16px;
+                   text-align:center; margin-bottom:12px; color:var(--ink); }
+
+  /* ---------- Колесо ---------- */
+  .wheel-wrap { position:relative; width:240px; height:240px; margin:8px auto 16px; }
+  .wheel-pointer { position:absolute; top:-6px; left:50%; transform:translateX(-50%);
+                   font-size:24px; z-index:2; }
+  canvas { width:240px; height:240px; }
+  .btn { display:block; width:100%; padding:14px; border:none; border-radius:14px;
+         background:linear-gradient(135deg,#dcba45,#b58f22); color:#fff;
+         font-size:16px; font-weight:800; cursor:pointer; letter-spacing:.3px;
+         box-shadow:var(--glow); }
+  .btn:disabled { opacity:.45; cursor:default; box-shadow:none; }
+  .btn.ghost { background:var(--gold-soft); color:var(--ink); box-shadow:none; }
+  .hidden { display:none; }
+  
+  .legend { margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
+  .legend-row { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:14px; }
+  .legend-row .em { font-size:18px; width:26px; text-align:center; }
+  .legend-row .nm { flex:1; }
+  .prize-box { text-align:center; padding:12px; }
+  .prize-box .big { font-size:19px; font-weight:800; margin:8px 0; }
+  .promo { font-family:monospace; font-size:17px; letter-spacing:2px;
+           background:#fff; color:var(--gold-deep); padding:8px 14px;
+           border:1px solid var(--gold); border-radius:10px;
+           display:inline-block; margin:8px 0; box-shadow:var(--glow); }
+  .code-row { padding:12px 4px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .code-row:last-child { border-bottom:none; }
+  .code-row .p { font-weight:800; font-size:14px; }
+  .code-row .c { font-family:monospace; color:var(--gold-deep); letter-spacing:1px; }
+  .code-row .e { color:var(--muted); font-size:12px; }
+  .code-row .tap { color:var(--muted); font-size:11px; float:right; }
+  .qr-box { text-align:center; padding:20px; }
+  .qr-box img { width:200px; height:200px; background:#fff; border-radius:12px; padding:8px;
+                border:1px solid var(--line); box-shadow:var(--glow); }
+  .visit-code { font-family:monospace; font-size:20px; letter-spacing:2px; color:var(--blue);
+                background:#eef4f9; padding:10px 16px; border-radius:10px;
+                display:inline-block; margin:12px 0 4px; }
+  .hint { color:var(--muted); font-size:13px; margin-top:10px; line-height:1.45; text-align:center; }
+  input.qr { width:100%; padding:14px; border:1px solid var(--line); border-radius:12px;
+             background:#fff; color:var(--ink); font-size:15px; text-align:center;
+             font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  .msg { text-align:center; margin-top:10px; font-size:14px; min-height:20px; }
+  .ok { color:var(--green); } .err { color:var(--red); }
+  
+  /* Модалка */
+  .modal { position:fixed; inset:0; background:rgba(26,20,15,.7); z-index:50;
+           display:flex; align-items:center; justify-content:center; padding:24px; }
+  .modal-card { background:var(--card); border-radius:20px; padding:22px; text-align:center;
+                max-width:320px; width:100%; box-shadow:var(--glow); }
+  .modal-card img { width:190px; height:190px; margin:12px auto; background:#fff;
+                    border:1px solid var(--line); border-radius:12px; padding:6px; display:block; }
+
+  /* ---------- Нижняя панель навигации (плавающая) ---------- */
+  .bottom-nav {
+    position:fixed; bottom:16px; left:0; right:0; margin:0 auto; max-width:420px;
+    display:flex; justify-content:space-around; align-items:center;
+    background:rgba(255,255,255,.12); border-radius:30px; padding:8px 6px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(201,162,39,.25); z-index:20;
+  }
+  .bottom-nav .nav-item {
+    flex:1; text-align:center; padding:8px 4px; cursor:pointer;
+    border-radius:14px; transition:background .2s,color .2s,box-shadow .2s;
+    color:var(--muted); font-size:11px; font-weight:600;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+  }
+  .bottom-nav .nav-item.hidden { display:none; }
+  .bottom-nav .nav-item.active {
+    background:linear-gradient(135deg,var(--gold-deep),var(--gold));
+    color:#fff; box-shadow:var(--glow);
+  }
+  .bottom-nav .nav-item .icon { font-size:18px; }
+</style>
+</head>
+<body>
+
+<!-- Шапка -->
+<div class="header">
+  <button class="header-back" id="btn-back">‹</button>
+  <h1>Victory Coffee</h1>
+  <div class="tagline">Бонусная программа</div>
+</div>
+
+<div class="container">
+
+  <!-- ГЛАВНАЯ ПАНЕЛЬ (клиент) -->
+  <div id="view-home" class="view active">
+    <div class="status-bar" id="home-status">
+      <div class="value" id="home-status-text">Загрузка…</div>
+    </div>
+    <div class="home-grid">
+      <div class="home-card" data-goto="wheel">
+        <span class="icon">🎡</span>
+        <div class="title">Рулетка</div>
+        <div class="desc">Крути и выигрывай</div>
+      </div>
+      <div class="home-card" data-goto="codes">
+        <span class="icon">🎁</span>
+        <div class="title">Призы</div>
+        <span class="badge" id="prize-count" style="display:none">0</span>
+        <div class="desc">Твои бонусы</div>
+      </div>
+      <div class="home-card full" data-goto="qr">
+        <span class="icon">🎫</span>
+        <div class="title">Мой код визита</div>
+        <div class="desc">Покажи официанту после оплаты</div>
+        <div class="visit-code" id="home-visit-code"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- РУЛЕТКА -->
+  <div id="view-wheel" class="view">
+    <div class="card">
+      <div class="wheel-wrap">
+        <div class="wheel-pointer">▼</div>
+        <canvas id="wheel" width="480" height="480"></canvas>
+      </div>
+      <button class="btn" id="btn-spin">Крутить</button>
+      <div class="msg" id="spin-msg"></div>
+      <div id="prize-result" class="prize-box hidden">
+        <div class="big" id="prize-name"></div>
+        <div id="prize-code"></div>
+      </div>
+      <div class="legend">
+        <div class="section-title">Призы на колесе</div>
+        <div id="legend-list"></div>
+      </div>
+    </div>
+    <div class="hint" id="ticket-hint"></div>
+  </div>
+
+  <!-- ПРИЗЫ -->
+  <div id="view-codes" class="view">
+    <div class="hint" style="margin-bottom:10px">Нажми на приз — появится QR для работника.</div>
+    <div class="card" id="codes-list"></div>
+  </div>
+
+  <!-- МОЙ КОД -->
+  <div id="view-qr" class="view">
+    <div class="card qr-box">
+      <img id="qr-img" alt="Мой код">
+      <div class="visit-code" id="visit-code-text"></div>
+      <button class="btn ghost" id="btn-copy">📋 Скопировать код</button>
+      <div class="hint">Покажи этот код официанту после оплаты — он выдаст тебе билет на рулетку.</div>
+    </div>
+  </div>
+
+  <!-- СКАНЕР (сотрудники — отдельная панель) -->
+  <div id="view-scan" class="view">
+    <div class="card">
+      <div class="section-title">Выдать билет</div>
+      <div class="hint" style="margin-top:0">Код визита клиента (VC-…) или нажми «Сканировать»:</div>
+      <input class="qr" id="scan-input" placeholder="VC-123456789" autocomplete="off">
+      <button class="btn ghost" id="btn-scan-visit" style="margin-top:10px">📷 Сканировать</button>
+      <button class="btn" id="btn-redeem" style="margin-top:8px">Выдать билет</button>
+      <div class="msg" id="scan-msg"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Проверить промокод</div>
+      <div class="hint" style="margin-top:0">VICTO-… или QR из «Призы» клиента. Код одноразовый:</div>
+      <input class="qr" id="verify-input" placeholder="VICTO-XXXXXX" autocomplete="off">
+      <button class="btn ghost" id="btn-scan-verify" style="margin-top:10px">📷 Сканировать</button>
+      <button class="btn" id="btn-verify" style="margin-top:8px">Проверить и применить</button>
+      <div class="msg" id="verify-msg"></div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА -->
+  <div id="modal" class="modal hidden" style="display:none !important;">
+    <div class="modal-card">
+      <div class="section-title" id="modal-title"></div>
+      <!-- Контейнер с фиксированным размером для пропорционального QR -->
+      <div style="width:190px; height:190px; margin:12px auto; background:#fff;
+                  border:1px solid var(--line); border-radius:12px; padding:6px;
+                  display:flex; align-items:center; justify-content:center;">
+        <img id="modal-qr" alt="QR приза" style="width:100%; height:100%; object-fit:contain; display:block;">
+      </div>
+      <div class="promo" id="modal-code"></div>
+      <button class="btn" id="modal-copy">📋 Скопировать код</button>
+      <button class="btn ghost" id="modal-close">Закрыть</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Нижняя панель навигации -->
+<div class="bottom-nav" id="bottom-nav" style="display:none">
+  <div class="nav-item" data-goto="wheel">
+    <span class="icon">🎡</span><span>Рулетка</span>
+  </div>
+  <div class="nav-item" data-goto="codes">
+    <span class="icon">🎁</span><span>Призы</span>
+  </div>
+  <div class="nav-item active" data-goto="qr">
+    <span class="icon">🎫</span><span>Код</span>
+  </div>
+  <div class="nav-item hidden" data-goto="scan" id="nav-scan">
+    <span class="icon">📷</span><span>Скан</span>
+  </div>
+</div>
+
+<script>
+const tgApp = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+if (tgApp) { tgApp.ready(); tgApp.expand(); }
+const initData = tgApp ? (tgApp.initData || '') : '';
+const H = { 'X-Telegram-Init-Data': initData, 'Content-Type': 'application/json' };
+
+let me = null;
+let isSpinning = false; // флаг: крутится ли сейчас рулетка
+const views = ['wheel','codes','qr','scan'];
+// Дефолтная вкладка — 'qr' (Код), не 'home'
+let defaultView = 'qr';
+
+// ---------- Показать нужный view и активную кнопку в нижнем меню ----------
+function showView(name) {
+  // меняем активный view — анимация через CSS
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+  // обновляем нижнее меню
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.goto === name));
+  // кнопка «назад»
+  document.getElementById('btn-back').style.display = (name === defaultView || !me?.is_staff) ? 'none' : 'block';
+  if (name === 'wheel') fetchPrizes();
+}
+
+// клик по карточке на главной (только для сотрудников)
+document.querySelectorAll('[data-goto]').forEach(el => {
+  el.addEventListener('click', () => {
+    showView(el.dataset.goto);
+  });
+});
+// кнопка назад (только для сотрудника)
+document.getElementById('btn-back').addEventListener('click', () => {
+  showView(defaultView);
+});
+
+// ---------- Загрузка данных ----------
+async function load() {
+  const r = await fetch('/api/me', { headers: H });
+  me = await r.json();
+  if (!me) return;
+
+  // Скрываем модалку при загрузке (защита от случайного появления)
+  hideModal();
+  
+  // Статус-панель на главной (для сотрудника не показываем)
+  if (!me.is_staff) {
+    const st = document.getElementById('home-status-text');
+    if (me.has_ticket) {
+      st.innerHTML = '✅ Билет активен — откройте «Рулетка»';
+      st.className = 'value green';
+    } else {
+      st.textContent = 'Билет пока нет — покажи код официанту';
+    }
+  }
+  
+  // Код визита на главной + кнопка копировать
+  document.getElementById('home-visit-code').textContent = me.visit_code;
+  document.getElementById('btn-copy').onclick = () => copyText(me.visit_code, document.getElementById('btn-copy'));
+  
+  // QR в разделе «Мой код»
+  document.getElementById('qr-img').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(me.visit_code);
+  document.getElementById('visit-code-text').textContent = me.visit_code;
+  
+  // Призы (только активные)
+  renderCodes();
+  const badge = document.getElementById('prize-count');
+  if (me.codes && me.codes.length > 0) {
+    badge.style.display = 'inline-block';
+    badge.textContent = me.codes.length;
+  } else {
+    badge.style.display = 'none';
+  }
+  
+  // Для сотрудника — показываем панель сканера, скрываем лишние карточки и нижнее меню
+  const isStaff = me.is_staff;
+  if (isStaff) {
+    // сотруднику сразу панель сканера
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-scan').classList.add('active');
+    document.getElementById('bottom-nav').style.display='none';
+    document.querySelector('.header').style.display='none';
+  } else {
+    // для клиента — оставляем текущую вкладку (не переключаем принудительно)
+      } else {
+        // пользователь уже выбрал вкладку — не переключаем её принудительно
+        // defaultView используется только при первом запуске, если ещё нет активного вью
+        if (defaultView === 'qr' && !document.querySelector('.view.active')) {
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+          document.getElementById('view-qr').classList.add('active');
+        }
+      }
+  
+  // Статус кнопки крутить
+  if (me.has_ticket) {
+    document.getElementById('btn-spin').disabled = false;
+    document.getElementById('ticket-hint').textContent = '🎫 Билет активен — жми «Крутить»!';
+  } else {
+    document.getElementById('btn-spin').disabled = true;
+    document.getElementById('ticket-hint').textContent = '🎫 Билета нет. Покажи код визита официанту после оплаты.';
+  }
+  
+  // Показываем сканер в нижнем меню для сотрудников
+  const navScan = document.getElementById('nav-scan');
+  if (navScan) navScan.classList.toggle('hidden', !isStaff);
+}
+
+async function copyText(text, btn, restoreLabel) {
+  try { await navigator.clipboard.writeText(text); } catch(e) {}
+  if (btn) { const t = btn.textContent; btn.textContent = '✅ Скопировано';
+             setTimeout(() => btn.textContent = restoreLabel || t, 1500); }
+}
+
+async function copyText(text, btn, restoreLabel) {
+  try { await navigator.clipboard.writeText(text); } catch(e) {}
+  if (btn) { const t = btn.textContent; btn.textContent = '✅ Скопировано';
+             setTimeout(() => btn.textContent = restoreLabel || t, 1500); }
+}
+
+function showPrizeStatus(code, prize, won) {
+  // Показать временную надпись "Приз получен 🎉"
+  const prizeRow = document.querySelector(`.code-row[data-code="${code}"]`);
+  if (prizeRow) {
+    const existing = prizeRow.querySelector('.prize-received');
+    if (existing) existing.remove();
+    const badge = document.createElement('div');
+    badge.className = 'prize-received';
+    badge.textContent = '🎉 Приз получен';
+    badge.style.cssText = 'color:var(--green); font-weight:bold; margin-top:4px; padding:2px 6px; border-radius:10px; background:var(--gold-soft); display:inline-block;';
+    prizeRow.querySelector('.p').append(badge);
+    // Удалить через 2 секунды
+    setTimeout(() => badge.remove(), 2000);
+  }
+}
+
+function renderCodes() {
+  const el = document.getElementById('codes-list');
+  if (!me || !me.codes || me.codes.length === 0) {
+    el.innerHTML = '<div class="hint">Призов пока нет. Крути рулетку после визита!</div>';
+    return;
+  }
+  // Удаляем старые обработчики перед перерисовкой
+  el.innerHTML = me.codes.map(c =>
+    `<div class="code-row" data-code="${c.code}" data-prize="${c.prize}">
+       <span class="tap">QR ›</span>
+       <div class="p">🎁 ${c.prize}</div>
+       <div class="c">${c.code}</div>
+       <div class="e">до ${c.expires.slice(0,10)}</div>
+     </div>`
+  ).join('');
+  // Показать надпись "Приз получен" для только что сканированных кодов
+  // (код передается из showPrizeQR, сохраняем в локальную переменную)
+  window.lastVerifiedCode = window.lastVerifiedCode || '';
+  if (window.lastVerifiedCode && document.querySelector(`.code-row[data-code="${window.lastVerifiedCode}"]`)) {
+    showPrizeStatus(window.lastVerifiedCode, me.codes.find(c => c.code === window.lastVerifiedCode)?.prize || '');
+    window.lastVerifiedCode = '';
+  }
+}
+
+// ---------- Модалка ----------
+function showPrizeQR(code, prize) {
+  if (!code || !prize) return;
+  document.getElementById('modal-title').textContent = prize;
+  document.getElementById('modal-code').textContent = code;
+  document.getElementById('modal-qr').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(code);
+  document.getElementById('modal-copy').onclick = () => copyText(code, document.getElementById('modal-copy'));
+  document.getElementById('modal').style.display = '';
+  document.getElementById('modal').classList.remove('hidden');
+}
+function hideModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modal').classList.add('hidden');
+}
+document.getElementById('codes-list').addEventListener('click', e => {
+  const row = e.target.closest('.code-row');
+  if (!row) return;
+  showPrizeQR(row.dataset.code, row.dataset.prize);
+});
+document.getElementById('modal-close').onclick = hideModal;
+document.getElementById('modal').onclick = e => { if (e.target.id === 'modal') hideModal(); };
+
+// ---------- Сканер ----------
+function scanInto(inputId) {
+  if (!(tgApp && tgApp.showScanQrPopup)) {
+    alert('Сканер доступен только в мобильном Telegram — введи код вручную.');
+    return;
+  }
+  tgApp.showScanQrPopup({ text: 'Наведи камеру на QR-код' }, qrText => {
+    tgApp.closeScanQrPopup();
+    document.getElementById(inputId).value = qrText;
+  });
+}
+document.getElementById('btn-scan-visit').onclick = () => scanInto('scan-input');
+document.getElementById('btn-scan-verify').onclick = () => scanInto('verify-input');
+document.getElementById('btn-redeem').onclick = async () => {
+  const code = document.getElementById('scan-input').value.trim();
+  const msg = document.getElementById('scan-msg');
+  if (!code) return;
+  const r = await fetch('/api/redeem', { method:'POST', headers:H, body:JSON.stringify({visit_code:code}) });
+  const res = await r.json().catch(()=>({}));
+  msg.className = 'msg '+(r.ok?'ok':'err');
+  msg.textContent = r.ok ? res.message : (res.detail||'Ошибка');
+  document.getElementById('scan-input').value = '';
+};
+document.getElementById('btn-verify').onclick = async () => {
+  const code = document.getElementById('verify-input').value.trim();
+  const msg = document.getElementById('verify-msg');
+  if (!code) return;
+  const r = await fetch('/api/verify', { method:'POST', headers:H, body:JSON.stringify({code}) });
+  const res = await r.json().catch(()=>({}));
+  msg.className = 'msg '+(r.ok?'ok':'err');
+  msg.textContent = r.ok ? res.message : (res.detail||'Ошибка');
+  if (r.ok) {
+    document.getElementById('verify-input').value = '';
+    window.lastVerifiedCode = code; // запомнить код для отображения "Приз получен"
+    setTimeout(() => load(), 800);
+  }
+};
+
+// ---------- Колесо ----------
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const COLORS = ['#f7e8c3','#e9cf9b','#fdf6e6','#dcb96e','#f4e3bd'];
+let sectors = [], currentRotation = 0;
+
+function shortLabel(label) {
+  if (/10%/.test(label)) return {em:'🎫', tx:'−10%'};
+  if (/15%/.test(label)) return {em:'🎫', tx:'−15%'};
+  if (/есерт/.test(label)) return {em:'🍰', tx:'Десерт'};
+  if (/кофе/i.test(label)) return {em:'☕', tx:'Кофе'};
+  return {em:'😔', tx:'Увы'};
+}
+const legendEmoji = label => shortLabel(label).em;
+
+async function fetchPrizes() {
+  const r = await fetch('/api/prizes');
+  sectors = await r.json();
+  document.getElementById('legend-list').innerHTML = sectors.map(s =>
+    `<div class="legend-row"><span class="em">${legendEmoji(s.label)}</span><span class="nm">${s.label}</span></div>`).join('');
+  drawWheel();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawWheel);
+}
+
+function drawWheel() {
+  const n = sectors.length, R = 240, cx = 240, cy = 240;
+  const arc = 2 * Math.PI / n;
+  ctx.clearRect(0,0,480,480);
+  sectors.forEach((s,i) => {
+    const col = COLORS[i % COLORS.length];
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R,i*arc,(i+1)*arc); ctx.closePath();
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle='#c9a227'; ctx.lineWidth=2.5; ctx.stroke();
+    const {em,tx} = shortLabel(s.label);
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(i*arc+arc/2);
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='46px sans-serif'; ctx.fillText(em, R-40, 0);
+    ctx.font='800 26px Manrope, sans-serif'; ctx.fillStyle='#3d2f16';
+    ctx.fillText(tx, R*0.5, 0);
+    ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,R-1,0,2*Math.PI);
+  ctx.strokeStyle='#c9a227'; ctx.lineWidth=5; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,52,0,2*Math.PI);
+  ctx.fillStyle='#ffffff'; ctx.fill();
+  ctx.lineWidth=4; ctx.strokeStyle='#c9a227'; ctx.stroke();
+  ctx.font='800 42px "Playfair Display", serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(166,124,26,.25)'; ctx.fillText('VC', cx, cy+4);
+  ctx.fillStyle='#a67c1a'; ctx.fillText('VC', cx, cy);
+}
+
+function spinTo(index) {
+  const n = sectors.length, arc = 2*Math.PI/n;
+  const target = (2*Math.PI*6) + (Math.PI*1.5 - (index+0.5)*arc);
+  const start = currentRotation, delta = target - (start % (2*Math.PI));
+  const t0 = performance.now(), dur = 4200;
+  function frame(t) {
+    const p = Math.min(1,(t-t0)/dur);
+    const ease = 1 - Math.pow(1-p,4);
+    currentRotation = start + delta*ease;
+    canvas.style.transform = `rotate(${currentRotation}rad)`;
+    if (p<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+document.getElementById('btn-spin').onclick = async () => {
+  const btn = document.getElementById('btn-spin');
+  const msg = document.getElementById('spin-msg');
+  if (isSpinning) return; // защита от повторного нажатия
+  isSpinning = true;
+  btn.disabled = true;
+  document.getElementById('prize-result').classList.add('hidden');
+  msg.className = 'msg'; msg.textContent = '';
+  // Скрываем любые модалки
+  hideModal();
+  const r = await fetch('/api/spin', {method:'POST', headers:H});
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    msg.className = 'msg err'; msg.textContent = e.detail || 'Ошибка';
+    btn.disabled = false; isSpinning = false;
+    return;
+  }
+  const res = await r.json();
+  spinTo(res.index);
+  setTimeout(() => {
+    document.getElementById('prize-name').textContent = (res.code?'🎉 ':'😢 ')+res.prize;
+    document.getElementById('prize-code').innerHTML = res.code
+      ? `Промокод: <span class="promo">${res.code}</span><div class="hint">Покажи при следующем заказе</div>` : '';
+    document.getElementById('prize-result').classList.remove('hidden');
+    load();
+    isSpinning = false;
+    if (res.code && tgApp && tgApp.HapticFeedback) tgApp.HapticFeedback.notificationOccurred('success');
+  }, 4400);
+};
+
+fetchPrizes();
+load();
+window.addEventListener('DOMContentLoaded', hideModal);
+
+// ---------- Авто-обновление статуса (когда работник выдаст билет) ----------
+let lastTicketState = null;
+setInterval(async () => {
+  if (!me) return;
+  try {
+    const r = await fetch('/api/me', { headers: H });
+    const data = await r.json();
+    if (data && data.has_ticket !== lastTicketState) {
+      lastTicketState = data.has_ticket;
+      load(); // обновить UI
+      if (data.has_ticket && currentView !== 'wheel') {
+        // если билет появился — показать уведомление
+        if (tgApp && tgApp.HapticFeedback) tgApp.HapticFeedback.notificationOccurred('success');
+      }
+    }
+    // Если приз был использован — обновляем список
+    if (data.codes && data.codes.length !== me?.codes?.length) {
+      renderCodes();
+      const badge = document.getElementById('prize-count');
+      if (data.codes && data.codes.length > 0) {
+        badge.style.display = 'inline-block';
+        badge.textContent = data.codes.length;
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  } catch(e) {}
+}, 3000); // каждые 3 секунды
+</script>
+</body>
+</html>
